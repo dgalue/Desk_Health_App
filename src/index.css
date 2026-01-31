@@ -1,0 +1,141 @@
+/* Font loaded locally via @fontsource/inter */
+
+:root {
+  /* Linear Palette */
+  --bg-color: #0c0e14; /* Deepest Background */
+  --sidebar-bg: #13161f; /* Sidebar */
+  --surface-bg: #1c202a; /* Cards/Modals */
+  --surface-hover: #232833;
+  
+  --primary-color: #5E6AD2; /* Linear Blurple */
+  --primary-glow: rgba(94, 106, 210, 0.4);
+  --secondary-color: #818cf8; /* Lighter purple */
+  --accent-color: #f59e0b; /* Amber/Orange for meal mode */
+  
+  --success-color: #27C96E;
+  --danger-color: #E5484D;
+  
+  --text-primary: #f2f2f3;
+  --text-secondary: #8a8f98;
+  --text-tertiary: #5f646e;
+  
+  --border-color: #2a2e38; /* Subtle separator */
+  --border-highlight: #3a3f4c;
+  
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --sidebar-width: 240px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-weight: 400;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  background: radial-gradient(circle at 50% 0%, #1a1d29 0%, var(--bg-color) 60%);
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: var(--font-family);
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Utilities */
+.text-secondary { color: var(--text-secondary); }
+.text-sm { fontSize: 0.85rem; }
+
+.linear-border {
+  border: 1px solid var(--border-color);
+}
+
+.glass-panel {
+  background: rgba(28, 32, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1) inset;
+  transition: all 0.15s ease;
+}
+.btn-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.9);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  transition: color 0.15s;
+}
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Time Input Icon Styling */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
