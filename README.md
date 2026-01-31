@@ -4,6 +4,13 @@
 
 Desk Health is a modern, wellness-focused timer application designed for desk workers. It helps you maintain a healthy work-life balance by reminding you to take regular breaks, stretch, and stay hydrated, all wrapped in a sleek, non-intrusive interface.
 
+## 📥 Download
+
+**Get the latest version for Windows:**
+[**Download Desk Health Setup (.exe)**](https://github.com/dgalue/Desk_Health_App/releases/latest)
+
+Simply download, run the installer, and you're good to go! No additional software required.
+
 ## ✨ Features
 
 - **Smart Timer**: Configurable Focus (25m), Short Break (5m), and Long Break (15m) intervals.
@@ -26,7 +33,9 @@ Desk Health is a modern, wellness-focused timer application designed for desk wo
 - **Styling**: Modern CSS Variables & Design Tokens (Linear-style aesthetic)
 - **Packaging**: [electron-builder](https://www.electron.build/)
 
-## 🚀 Getting Started
+## 💻 Development (Build from Source)
+
+If you want to contribute or build the app yourself, follow these steps:
 
 ### Prerequisites
 
@@ -37,7 +46,7 @@ Desk Health is a modern, wellness-focused timer application designed for desk wo
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/desk-health.git
+    git clone https://github.com/dgalue/Desk_Health_App.git
     cd desk-health
     ```
 
@@ -51,7 +60,7 @@ Desk Health is a modern, wellness-focused timer application designed for desk wo
     npm run electron:dev
     ```
 
-## 📦 Building the Application
+### Building the Application
 
 To build the executable for Windows (Installer + Portable):
 
@@ -81,7 +90,7 @@ By default, this project is configured to skip code signing (`forceCodeSigning: 
 
 ## 🧪 Testing & Verification
 
-A comprehensive test database containing verification steps, test cases, and known limitations is available in [TEST_DATABASE.md](./TEST_DATABASE.md). Use this as a reference for QA template.
+A comprehensive test database containing verification steps, test cases, and known limitations is available in [TEST_DATABASE.md](./TEST_DATABASE.md). Use this as a reference or QA template.
 
 ## 📝 License
 
