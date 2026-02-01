@@ -137,21 +137,35 @@ function App() {
   const handleTimerCompleteRef = useRef(null);
   const timerCompletedRef = useRef(false); // Track if timer already completed
 
+  // Ref for drift correction
+  const lastTickRef = useRef(Date.now());
+
   // Timer countdown - runs in App.jsx so it continues when navigating views
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
       timerCompletedRef.current = false; // Reset when timer is running
+      lastTickRef.current = Date.now(); // Initialize baseline
+
       interval = setInterval(() => {
-        setTimeLeft(prev => {
-          const newTime = prev - 1;
-          if (newTime <= 0 && handleTimerCompleteRef.current && !timerCompletedRef.current) {
-            timerCompletedRef.current = true; // Mark as completed to prevent double call
-            // Schedule complete handler for next tick to avoid state update during render
-            setTimeout(() => handleTimerCompleteRef.current(), 0);
-          }
-          return Math.max(0, newTime);
-        });
+        const now = Date.now();
+        const deltaMs = now - lastTickRef.current;
+        
+        // Only update if at least 1 second has passed (avoid frequent re-renders)
+        if (deltaMs >= 1000) {
+           const deltaSeconds = Math.floor(deltaMs / 1000);
+           lastTickRef.current += deltaSeconds * 1000; // Advance baseline by consumed seconds
+
+           setTimeLeft(prev => {
+            const newTime = prev - deltaSeconds;
+            if (newTime <= 0 && handleTimerCompleteRef.current && !timerCompletedRef.current) {
+              timerCompletedRef.current = true; // Mark as completed to prevent double call
+              // Schedule complete handler for next tick to avoid state update during render
+              setTimeout(() => handleTimerCompleteRef.current(), 0);
+            }
+            return Math.max(0, newTime);
+          });
+        }
       }, 1000);
     }
     return () => clearInterval(interval);
