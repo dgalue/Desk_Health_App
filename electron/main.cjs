@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, shell, Notification, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow;
 let tray;
@@ -169,13 +170,21 @@ if (!gotTheLock) {
 
         // Show native notification with proper app name and icon
         ipcMain.on('show-notification', (event, title, body) => {
-            const iconPath = getAssetPath('public', 'icon.ico');
-            const notification = new Notification({
-                title: title,
-                body: body,
-                icon: iconPath
-            });
-            notification.show();
+            try {
+                const iconPath = getAssetPath('public', 'icon.ico');
+                const options = {
+                    title: title,
+                    body: body
+                };
+                // Only attach icon if it actually exists to prevent errors
+                if (fs.existsSync(iconPath)) {
+                    options.icon = iconPath;
+                }
+                const notification = new Notification(options);
+                notification.show();
+            } catch (error) {
+                console.error('Notification failed:', error);
+            }
         });
 
         app.on('activate', () => {

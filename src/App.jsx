@@ -78,7 +78,7 @@ const Sidebar = ({ activeView, onViewChange }) => {
 
       {/* Footer Info */}
       <div style={{ marginTop: 'auto', paddingLeft: '0.75rem', fontSize: '0.7rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.0</div>
+        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.6</div>
         <div>Made with ❤️ by Diego Galue</div>
       </div>
     </div>
