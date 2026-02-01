@@ -53,6 +53,7 @@ This document serves as a comprehensive verification checklist for the **Desk He
 | **FNC-04** | Expenses | Add Custom Exercise | Appears in list, persisted to localStorage. | ✅ PASS | |
 | **FNC-05** | Expenses | Delete Exercise | Removed from list immediately. | ✅ PASS | |
 | **FNC-06** | Sound | Play Custom Sound | Audio plays on timer completion. | ✅ PASS | |
+| **FNC-07** | Timer | **Background Drift** | Minimized timer matches real clock Time (no throttling lag). | ⏳ TEST | Critical Fix v1.0.1 |
 
 ## 6. Known Limitations (v1.0)
 

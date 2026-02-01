@@ -137,39 +137,43 @@ function App() {
   const handleTimerCompleteRef = useRef(null);
   const timerCompletedRef = useRef(false); // Track if timer already completed
 
-  // Ref for drift correction
-  const lastTickRef = useRef(Date.now());
-
+  // Ref for drift correction (Not needed for target time approach, but keeping consistent structure)
   // Timer countdown - runs in App.jsx so it continues when navigating views
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
       timerCompletedRef.current = false; // Reset when timer is running
-      lastTickRef.current = Date.now(); // Initialize baseline
+
+      // Calculate target end time based on current timeLeft
+      // This is the "Anchor" point. Even if the app sleeps, this time is fixed in the future.
+      const targetTime = Date.now() + (timeLeft * 1000);
 
       interval = setInterval(() => {
         const now = Date.now();
-        const deltaMs = now - lastTickRef.current;
-        
-        // Only update if at least 1 second has passed (avoid frequent re-renders)
-        if (deltaMs >= 1000) {
-           const deltaSeconds = Math.floor(deltaMs / 1000);
-           lastTickRef.current += deltaSeconds * 1000; // Advance baseline by consumed seconds
+        const secondsRemaining = Math.ceil((targetTime - now) / 1000);
 
-           setTimeLeft(prev => {
-            const newTime = prev - deltaSeconds;
-            if (newTime <= 0 && handleTimerCompleteRef.current && !timerCompletedRef.current) {
-              timerCompletedRef.current = true; // Mark as completed to prevent double call
-              // Schedule complete handler for next tick to avoid state update during render
-              setTimeout(() => handleTimerCompleteRef.current(), 0);
-            }
-            return Math.max(0, newTime);
-          });
-        }
+        // Calculate the NEW timeLeft directly from target
+        // This implicitly handles any drift or sleep duration
+
+        setTimeLeft(prev => {
+          // We ignore 'prev' for calculation, but we use the updater to ensure atomic update 
+          // and to check for completion state safely.
+          // Actually, we can just use secondsRemaining, but we need to guard against 
+          // multiple overlapping updates or race conditions (though with interval it's serial).
+
+          const newTime = secondsRemaining;
+
+          if (newTime <= 0 && handleTimerCompleteRef.current && !timerCompletedRef.current) {
+            timerCompletedRef.current = true;
+            setTimeout(() => handleTimerCompleteRef.current(), 0);
+          }
+          return Math.max(0, newTime);
+        });
+
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive]); // Remove timeLeft from dependencies to prevent re-runs
+  }, [isActive]); // Vital: Re-calculates targetTime when isActive toggles (Pause/Resume)
 
   // UI State (Sub-states for Timer View)
   const [showSelector, setShowSelector] = useState(false);

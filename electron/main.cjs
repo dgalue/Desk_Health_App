@@ -22,7 +22,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.cjs')
+            preload: path.join(__dirname, 'preload.cjs'),
+            backgroundThrottling: false // Important: Prevent throttling when minimized
         },
         autoHideMenuBar: true,
         show: false // Don't show until ready
