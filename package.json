@@ -1,7 +1,7 @@
 {
   "name": "desk-health",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Desk Health - Wellness Timer for Desk Workers",
   "author": "Diego Galue",
   "main": "electron/main.cjs",
