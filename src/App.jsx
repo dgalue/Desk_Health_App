@@ -256,6 +256,9 @@ function App() {
     }
   }, [workDuration, isActive, mode]);
 
+  const warningSentRef = useRef(false);
+  const startupCheckDoneRef = useRef(false);
+
   // Check Schedule Logic & Auto-Start
   useEffect(() => {
     const checkSchedule = () => {
@@ -269,6 +272,49 @@ function App() {
       const endMinutes = endH * 60 + endM;
 
       const isNowOffDuty = currentMinutes < startMinutes || currentMinutes >= endMinutes;
+
+      // 1. Pre-Start Warning (5 mins before start)
+      const minutesUntilStart = startMinutes - currentMinutes;
+      if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !isNowOffDuty) {
+        // Technically "isNowOffDuty" logic above might say TRUE if before start.
+        // Let's rely on minutesUntilStart.
+        // Wait, if current < start, isNowOffDuty IS true.
+      }
+
+      // Correct Pre-Start Logic:
+      if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !warningSentRef.current) {
+        warningSentRef.current = true;
+        if (notificationsEnabled && window.electronAPI) {
+          window.electronAPI.showNotification("Get Ready!", `Work schedule starts in ${minutesUntilStart} minutes.`);
+        }
+      } else if (minutesUntilStart > 5 || currentMinutes >= startMinutes) {
+        // Reset warning state if we move away from the warning window
+        if (currentMinutes < startMinutes) warningSentRef.current = false;
+        // If we passed start time, we don't reset to false (to avoid repeating), 
+        // but we might want to reset for TOMORROW. 
+        // Simply: if minutesUntilStart is huge (tomorrow), we reset.
+        if (minutesUntilStart < -60) warningSentRef.current = false; // Reset after 1 hour past start? Simpler logic:
+      }
+
+      // Reset warning ref for the next day/cycle if we are far from start
+      if (Math.abs(startMinutes - currentMinutes) > 60) {
+        warningSentRef.current = false;
+      }
+
+
+      // 2. Late Start Check (Run ONCE on mount/startup)
+      if (!startupCheckDoneRef.current) {
+        startupCheckDoneRef.current = true;
+        // If we are INSIDE the schedule (isNowOffDuty is FALSE) but Timer is NOT active
+        if (!isNowOffDuty && !isActive && mode !== 'MEAL') {
+          if (notificationsEnabled && window.electronAPI) {
+            window.electronAPI.showNotification("Late Start?", "You are within working hours. Open app to start the timer.");
+          }
+          // Optional: Auto-show window?
+          // window.electronAPI.focusWindow(); // Maybe too intrusive? Notification is enough.
+        }
+      }
+
 
       if (isNowOffDuty) {
         setIsOffDuty(true);
