@@ -259,6 +259,11 @@ function App() {
   const warningSentRef = useRef(false);
   const startupCheckDoneRef = useRef(false);
 
+  // Reset warning state if schedule changes (ensures testing works)
+  useEffect(() => {
+    warningSentRef.current = false;
+  }, [schedule]);
+
   // Check Schedule Logic & Auto-Start
   useEffect(() => {
     const checkSchedule = () => {
@@ -275,11 +280,6 @@ function App() {
 
       // 1. Pre-Start Warning (5 mins before start)
       const minutesUntilStart = startMinutes - currentMinutes;
-      if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !isNowOffDuty) {
-        // Technically "isNowOffDuty" logic above might say TRUE if before start.
-        // Let's rely on minutesUntilStart.
-        // Wait, if current < start, isNowOffDuty IS true.
-      }
 
       // Correct Pre-Start Logic:
       if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !warningSentRef.current) {
