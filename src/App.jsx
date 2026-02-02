@@ -10,6 +10,9 @@ import { useExercises } from './hooks/useExercises';
 import { useProgress } from './hooks/useProgress';
 import { useAudio } from './hooks/useAudio';
 
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+
 // --- Icons ---
 const Icons = {
   Timer: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
@@ -19,7 +22,54 @@ const Icons = {
   Utensils: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
 };
 
-// --- Sidebar Component ---
+// --- BottomNav Component (Mobile) ---
+const BottomNav = ({ activeView, onViewChange }) => {
+  const menuItems = [
+    { id: 'TIMER', label: 'Focus', icon: <Icons.Timer /> },
+    { id: 'EXERCISES', label: 'Exercises', icon: <Icons.List /> },
+    { id: 'STATS', label: 'Stats', icon: <Icons.BarChart /> },
+    { id: 'SETTINGS', label: 'Settings', icon: <Icons.Settings /> },
+  ];
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      width: '100%',
+      background: 'var(--sidebar-bg)',
+      borderTop: '1px solid var(--border-color)',
+      display: 'flex',
+      justifyContent: 'space-around',
+      padding: '0.75rem 0.5rem',
+      zIndex: 100
+    }}>
+      {menuItems.map(item => (
+        <button
+          key={item.id}
+          onClick={() => onViewChange(item.id)}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.25rem',
+            background: 'transparent',
+            border: 'none',
+            color: activeView === item.id ? 'var(--primary-color)' : 'var(--text-tertiary)',
+            cursor: 'pointer',
+            fontSize: '0.7rem',
+            transition: 'color 0.2s'
+          }}
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// --- Sidebar Component (Desktop) ---
 const Sidebar = ({ activeView, onViewChange }) => {
   const menuItems = [
     { id: 'TIMER', label: 'Focus', icon: <Icons.Timer /> },
@@ -78,14 +128,45 @@ const Sidebar = ({ activeView, onViewChange }) => {
 
       {/* Footer Info */}
       <div style={{ marginTop: 'auto', paddingLeft: '0.75rem', fontSize: '0.7rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.6</div>
-        <div>Made with ❤️ by Diego Galue</div>
+        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.7</div>
+        <div>Made with ❤️ by <a href="https://github.com/dgalue" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted currentColor' }}>Diego Galue</a></div>
       </div>
     </div>
   );
 };
 
 function App() {
+  // Mobile Detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Notification Helper (Unified for Electron & Mobile)
+  const sendNotification = async (title, body) => {
+    if (window.electronAPI) {
+      window.electronAPI.showNotification(title, body);
+    } else if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.schedule({
+          notifications: [{
+            title,
+            body,
+            id: Date.now(),
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: null
+          }]
+        });
+      } catch (err) {
+        console.error("Local Notification Error:", err);
+      }
+    }
+  };
+
+
   // Navigation State
   const [activeView, setActiveView] = useState('TIMER');
 
@@ -284,8 +365,8 @@ function App() {
       // Correct Pre-Start Logic:
       if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !warningSentRef.current) {
         warningSentRef.current = true;
-        if (notificationsEnabled && window.electronAPI) {
-          window.electronAPI.showNotification("Get Ready!", `Work schedule starts in ${minutesUntilStart} minutes.`);
+        if (notificationsEnabled) {
+          sendNotification("Get Ready!", `Work schedule starts in ${minutesUntilStart} minutes.`);
         }
       } else if (minutesUntilStart > 5 || currentMinutes >= startMinutes) {
         // Reset warning state if we move away from the warning window
@@ -307,8 +388,8 @@ function App() {
         startupCheckDoneRef.current = true;
         // If we are INSIDE the schedule (isNowOffDuty is FALSE) but Timer is NOT active
         if (!isNowOffDuty && !isActive && mode !== 'MEAL') {
-          if (notificationsEnabled && window.electronAPI) {
-            window.electronAPI.showNotification("Late Start?", "You are within working hours. Open app to start the timer.");
+          if (notificationsEnabled) {
+            sendNotification("Late Start?", "You are within working hours. Open app to start the timer.");
           }
           // Optional: Auto-show window?
           // window.electronAPI.focusWindow(); // Maybe too intrusive? Notification is enough.
@@ -326,8 +407,8 @@ function App() {
           setMode('WORK');
           setCurrentDuration(workDuration);
           setIsActive(true);
-          if (window.electronAPI) {
-            window.electronAPI.showNotification("Work Started", "Focus timer started automatically.");
+          if (notificationsEnabled) {
+            sendNotification("Work Started", "Focus timer started automatically.");
           }
         }
       }
@@ -362,8 +443,8 @@ function App() {
         setMode('MEAL');
         setCurrentDuration(mealDuration);
         setIsActive(true);
-        if (notificationsEnabled && window.electronAPI) {
-          window.electronAPI.showNotification("Meal Time!", "Time for your meal break.");
+        if (notificationsEnabled) {
+          sendNotification("Meal Time!", "Time for your meal break.");
         }
       }
     };
@@ -391,9 +472,9 @@ function App() {
     }
 
     if (mode === 'WORK') {
-      if (notificationsEnabled && window.electronAPI) {
+      if (notificationsEnabled) {
         const body = upcomingExercise ? `Time for: ${upcomingExercise.name}` : "Select an exercise to get moving.";
-        window.electronAPI.showNotification("Time to Move!", body);
+        sendNotification("Time to Move!", body);
       }
       // Go directly to pre-selected exercise or show selector
       if (upcomingExercise) {
@@ -403,8 +484,8 @@ function App() {
         setShowSelector(true);
       }
     } else if (mode === 'MEAL') {
-      if (notificationsEnabled && window.electronAPI) {
-        window.electronAPI.showNotification("Break Over", "Back to work! Focus timer starting.");
+      if (notificationsEnabled) {
+        sendNotification("Break Over", "Back to work! Focus timer starting.");
       }
       // Auto-restart Work
       setMode('WORK');
@@ -490,13 +571,26 @@ function App() {
 
   // --- Main Render ---
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--bg-color)', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      width: '100vw',
+      height: '100vh',
+      background: 'var(--bg-color)',
+      overflow: 'hidden'
+    }}>
 
-      {/* 1. Sidebar */}
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      {/* 1. Sidebar (Desktop Only) */}
+      {!isMobile && <Sidebar activeView={activeView} onViewChange={setActiveView} />}
 
       {/* 2. Main Content Area */}
-      <main style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      <main style={{
+        flex: 1,
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        paddingBottom: isMobile ? '70px' : '0'
+      }}>
 
         {/* TIMER VIEW (Default) */}
         {activeView === 'TIMER' && (
@@ -709,6 +803,7 @@ function App() {
         }
 
       </main >
+      {isMobile && <BottomNav activeView={activeView} onViewChange={setActiveView} />}
     </div >
   );
 }
