@@ -128,7 +128,7 @@ const Sidebar = ({ activeView, onViewChange }) => {
 
       {/* Footer Info */}
       <div style={{ marginTop: 'auto', paddingLeft: '0.75rem', fontSize: '0.7rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.7</div>
+        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.0.8</div>
         <div>Made with ❤️ by <a href="https://github.com/dgalue" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted currentColor' }}>Diego Galue</a></div>
       </div>
     </div>
@@ -214,9 +214,12 @@ function App() {
   const [mode, setMode] = useState('WORK'); // 'WORK', 'MEAL', 'EXERCISE'
   const [isOffDuty, setIsOffDuty] = useState(false);
 
-  // Ref to hold the latest handleTimerComplete to avoid stale closures
+  // Ref to hold the latest handleTimerComplete to avoid setting stale closures
   const handleTimerCompleteRef = useRef(null);
   const timerCompletedRef = useRef(false); // Track if timer already completed
+
+  // NEW: Ref to store paused work time when switching to Meal Mode
+  const pausedWorkTimeRef = useRef(null);
 
   // Ref for drift correction (Not needed for target time approach, but keeping consistent structure)
   // Timer countdown - runs in App.jsx so it continues when navigating views
@@ -254,7 +257,7 @@ function App() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive]); // Vital: Re-calculates targetTime when isActive toggles (Pause/Resume)
+  }, [isActive, mode]); // Vital: Re-calculates targetTime when isActive or mode changes
 
   // UI State (Sub-states for Timer View)
   const [showSelector, setShowSelector] = useState(false);
@@ -489,8 +492,16 @@ function App() {
       }
       // Auto-restart Work
       setMode('WORK');
-      setCurrentDuration(workDuration);
-      setTimeLeft(workDuration);
+
+      // Restore paused time if available, otherwise reset
+      if (pausedWorkTimeRef.current !== null) {
+        setCurrentDuration(workDuration); // Keep max duration context
+        setTimeLeft(pausedWorkTimeRef.current);
+        pausedWorkTimeRef.current = null;
+      } else {
+        setCurrentDuration(workDuration);
+        setTimeLeft(workDuration);
+      }
       setIsActive(true);
     }
   };
@@ -525,16 +536,28 @@ function App() {
 
   const toggleMealMode = () => {
     if (mode !== 'MEAL') {
+      // Switch TO Meal Mode
+      // Save current Work progress if we are in WORK mode
+      if (mode === 'WORK') {
+        pausedWorkTimeRef.current = timeLeft;
+      }
+
       setMode('MEAL');
       setCurrentDuration(mealDuration);
       setTimeLeft(mealDuration);
       setIsActive(true);
     } else {
-      // Cancel Meal Mode -> Go back to Work (Paused)
+      // Cancel Meal Mode -> Go back to Work (Resume)
       setMode('WORK');
       setCurrentDuration(workDuration);
-      setTimeLeft(workDuration);
-      setIsActive(false);
+
+      if (pausedWorkTimeRef.current !== null) {
+        setTimeLeft(pausedWorkTimeRef.current);
+        pausedWorkTimeRef.current = null;
+      } else {
+        setTimeLeft(workDuration);
+      }
+      setIsActive(true); // Auto-resume work
     }
   };
 
