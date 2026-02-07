@@ -55,14 +55,17 @@ const Settings = ({
     };
 
     const containerStyle = isEmbedded ? {
-        height: '100%',
+        flex: 1, // Changed from height: 100% to flex: 1
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
         overflowY: 'auto',
-        padding: '2rem'
+        WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS/Android
+        padding: '2rem',
+        boxSizing: 'border-box', // Ensure padding doesn't add to width/height
+        minHeight: 0 // Flexbox safety
     } : {
         position: 'absolute',
         top: 0,

@@ -367,7 +367,7 @@ const ExerciseManager = ({ allExercises, customExercises, onAdd, onUpdate, onDel
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        minHeight: '400px'
+        minHeight: 0 // Removed fixed minHeight 400px which caused clipping
     } : {
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(5px)',
@@ -380,6 +380,7 @@ const ExerciseManager = ({ allExercises, customExercises, onAdd, onUpdate, onDel
         flex: 1,
         padding: '2rem',
         overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         background: 'transparent',
         border: 'none',
         color: 'var(--text-primary)'

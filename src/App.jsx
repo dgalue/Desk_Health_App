@@ -612,7 +612,8 @@ function App() {
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        paddingBottom: isMobile ? '70px' : '0'
+        paddingBottom: isMobile ? '70px' : '0',
+        overflow: 'hidden' // Force children to handle scrolling
       }}>
 
         {/* TIMER VIEW (Default) */}
