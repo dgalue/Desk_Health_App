@@ -7,62 +7,65 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Source: Transparent Heart
-const artifactPath = String.raw`c:\Users\diego\.gemini\antigravity\brain\7925f241-6815-4d28-984f-c453974906b5\app_icon_v3_transparent_1769679492622.png`;
+// Disable cache
+sharp.cache(false);
 
-// Destinations
+const artifactPath = String.raw`c:\Users\diego\.gemini\antigravity\brain\7925f241-6815-4d28-984f-c453974906b5\app_icon_v3_transparent_1769679492622.png`;
+const tempFgPath = path.resolve(__dirname, 'temp_fg.png');
+const tempBgPath = path.resolve(__dirname, 'temp_bg.png');
 const publicIconPath = path.resolve(__dirname, '../public/icon.png');
 const assetsLogoPath = path.resolve(__dirname, '../assets/logo.png');
-const assetsSplashPath = path.resolve(__dirname, '../assets/splash.png');
-
-// App Theme Color: #0c0e14
-const darkColor = { r: 12, g: 14, b: 20, alpha: 1 };
 
 async function createCircularIcon() {
     try {
-        console.log(`Processing ${artifactPath}...`);
+        console.log("Starting...");
 
-        if (!fs.existsSync(artifactPath)) {
-            console.error("Artifact not found.");
-            process.exit(1);
-        }
+        const size = 1024;
+        const scaleFactor = 1.25; // 25% larger to really fill it
+        const newWidth = Math.round(size * scaleFactor);
+        const offset = Math.floor((newWidth - size) / 2);
 
-        const input = sharp(artifactPath);
-        const metadata = await input.metadata();
-        const size = metadata.width;
-        const radius = size / 2;
-
-        // 1. Create a Circle Mask (SVG)
-        const circleSvg = Buffer.from(
-            `<svg width="${size}" height="${size}"><circle cx="${radius}" cy="${radius}" r="${radius}" fill="#0c0e14"/></svg>`
-        );
-
-        // 2. Create the Dark Circle Base
-        const darkCircle = await sharp(circleSvg).png().toBuffer();
-
-        // 3. Composite Heart ON TOP of Dark Circle
-        // We might need to resize the heart slightly if it touches edges, 
-        // but the transparent source likely has padding.
-        // Let's just overlay it.
-        const composite = await sharp(darkCircle)
-            .composite([{ input: artifactPath, blend: 'over' }])
+        // 1. Resize FG -> Extract Center 1024x1024 -> Save
+        console.log(`Resizing FG to ${newWidth}px and cropping center...`);
+        await sharp(artifactPath)
+            .resize({ width: newWidth })
+            .extract({ left: offset, top: offset, width: size, height: size })
             .png()
-            .toBuffer();
+            .toFile(tempFgPath);
 
-        // 4. Save
-        console.log(`Saving circular icon to ${publicIconPath}...`);
-        await sharp(composite).toFile(publicIconPath);
-        await sharp(composite).toFile(assetsLogoPath);
+        // 2. Create BG and save
+        console.log("Creating BG...");
+        const radius = size / 2;
+        const circleSvg = `<svg width="${size}" height="${size}"><circle cx="${radius}" cy="${radius}" r="${radius}" fill="#0c0e14"/></svg>`;
 
-        // For splash, maybe keep the square? or same circle? 
-        // User said "indigo square circular", implying the app icon.
-        // Splash usually fills screen. A solid circle in middle of splash is fine.
-        await sharp(composite).toFile(assetsSplashPath);
+        await sharp(Buffer.from(circleSvg))
+            .png()
+            .toFile(tempBgPath);
 
-        console.log("Success: Icon is now Circular.");
+        // 3. Composite
+        console.log("Compositing...");
+        await sharp(tempBgPath)
+            .composite([{
+                input: tempFgPath,
+                blend: 'over',
+                gravity: 'center'
+            }])
+            .png()
+            .toFile(publicIconPath);
 
-    } catch (error) {
-        console.error("Error:", error);
+        console.log(`Saved ${publicIconPath}`);
+
+        // Copy to assets
+        fs.copyFileSync(publicIconPath, assetsLogoPath);
+
+        // Clean up
+        if (fs.existsSync(tempFgPath)) fs.unlinkSync(tempFgPath);
+        if (fs.existsSync(tempBgPath)) fs.unlinkSync(tempBgPath);
+
+        console.log("Success: Icon Scaled Up & Circular.");
+
+    } catch (e) {
+        console.error("FAILED:", e);
     }
 }
 
