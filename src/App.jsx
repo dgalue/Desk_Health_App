@@ -342,6 +342,7 @@ function App() {
 
   const warningSentRef = useRef(false);
   const startupCheckDoneRef = useRef(false);
+  const mealSkippedRef = useRef(false); // Track if user manually skipped the current meal
 
   // Reset warning state if schedule changes (ensures testing works)
   useEffect(() => {
@@ -442,7 +443,12 @@ function App() {
 
       const isNowMealTime = currentMinutes >= mealStartMinutes && currentMinutes < mealEndMinutes;
 
-      if (isNowMealTime && mode !== 'MEAL' && !isOffDuty) {
+      // Reset skipped state if we are outside the meal window
+      if (!isNowMealTime) {
+        mealSkippedRef.current = false;
+      }
+
+      if (isNowMealTime && mode !== 'MEAL' && !isOffDuty && !mealSkippedRef.current) {
         setMode('MEAL');
         setCurrentDuration(mealDuration);
         setIsActive(true);
@@ -548,6 +554,21 @@ function App() {
       setIsActive(true);
     } else {
       // Cancel Meal Mode -> Go back to Work (Resume)
+      
+      // If we are currently in the meal window, mark it as skipped so it doesn't auto-start again immediately
+      const now = new Date();
+      if (mealScheduleEnabled) {
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          const [mealStartH, mealStartM] = mealSchedule.start.split(':').map(Number);
+          const mealStartMinutes = mealStartH * 60 + mealStartM;
+          const [mealEndH, mealEndM] = mealSchedule.end.split(':').map(Number);
+          const mealEndMinutes = mealEndH * 60 + mealEndM;
+
+          if (currentMinutes >= mealStartMinutes && currentMinutes < mealEndMinutes) {
+              mealSkippedRef.current = true;
+          }
+      }
+
       setMode('WORK');
       setCurrentDuration(workDuration);
 
