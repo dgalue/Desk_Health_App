@@ -181,6 +181,13 @@ if (!gotTheLock) {
                     options.icon = iconPath;
                 }
                 const notification = new Notification(options);
+                notification.on('click', () => {
+                    if (mainWindow) {
+                        if (mainWindow.isMinimized()) mainWindow.restore();
+                        mainWindow.show();
+                        mainWindow.focus();
+                    }
+                });
                 notification.show();
             } catch (error) {
                 console.error('Notification failed:', error);

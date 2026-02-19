@@ -190,6 +190,12 @@ function App() {
   const [mealDuration, setMealDuration] = useState(60 * 60);
   const [schedule, setSchedule] = useState({ start: '09:00', end: '17:00' });
 
+  // Weekly Schedule: which days the app is active (0=Sun, 1=Mon, ..., 6=Sat)
+  const [workDays, setWorkDays] = useState(() => {
+    const saved = localStorage.getItem('workDays');
+    return saved !== null ? JSON.parse(saved) : [1, 2, 3, 4, 5]; // Mon-Fri default
+  });
+
   const [mealSchedule, setMealSchedule] = useState({ start: '12:00', end: '13:00' });
   const [mealScheduleEnabled, setMealScheduleEnabled] = useState(() => {
     const saved = localStorage.getItem('mealScheduleEnabled');
@@ -209,10 +215,11 @@ function App() {
 
   // Runtime State
   const [currentDuration, setCurrentDuration] = useState(workDuration);
-  const [timeLeft, setTimeLeft] = useState(workDuration); // Lifted from Timer component
+  const [timeLeft, setTimeLeft] = useState(workDuration);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('WORK'); // 'WORK', 'MEAL', 'EXERCISE'
   const [isOffDuty, setIsOffDuty] = useState(false);
+  const timerRestoredRef = useRef(false); // Prevent double-restore
 
   // Ref to hold the latest handleTimerComplete to avoid setting stale closures
   const handleTimerCompleteRef = useRef(null);
@@ -258,6 +265,62 @@ function App() {
     }
     return () => clearInterval(interval);
   }, [isActive, mode]); // Vital: Re-calculates targetTime when isActive or mode changes
+
+  // --- Persistent Timer: Save state every 5s while active ---
+  useEffect(() => {
+    if (!isActive) {
+      // Clear saved state when timer is stopped (not just paused)
+      // We keep it if mode is EXERCISE (temporary pause)
+      if (mode !== 'EXERCISE') {
+        localStorage.removeItem('timerState');
+      }
+      return;
+    }
+    const saveState = () => {
+      const state = {
+        timeLeft,
+        mode,
+        currentDuration,
+        targetEndTime: Date.now() + (timeLeft * 1000),
+        savedAt: Date.now()
+      };
+      localStorage.setItem('timerState', JSON.stringify(state));
+    };
+    saveState(); // Save immediately on start
+    const interval = setInterval(saveState, 5000);
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft, mode, currentDuration]);
+
+  // --- Persistent Timer: Restore on mount ---
+  useEffect(() => {
+    if (timerRestoredRef.current) return;
+    timerRestoredRef.current = true;
+
+    const saved = localStorage.getItem('timerState');
+    if (!saved) return;
+
+    try {
+      const state = JSON.parse(saved);
+      const elapsed = Math.floor((Date.now() - state.savedAt) / 1000);
+      const remaining = state.timeLeft - elapsed;
+
+      if (remaining > 0) {
+        // Timer still has time left — resume it
+        setMode(state.mode);
+        setCurrentDuration(state.currentDuration);
+        setTimeLeft(remaining);
+        setIsActive(true);
+        console.log(`Timer restored: ${remaining}s remaining (${state.mode} mode)`);
+      } else {
+        // Timer would have completed while app was closed
+        // Just clear it and let the user start fresh
+        localStorage.removeItem('timerState');
+        console.log('Timer expired while app was closed — cleared.');
+      }
+    } catch (e) {
+      localStorage.removeItem('timerState');
+    }
+  }, []);
 
   // UI State (Sub-states for Timer View)
   const [showSelector, setShowSelector] = useState(false);
@@ -361,7 +424,11 @@ function App() {
       const [endH, endM] = schedule.end.split(':').map(Number);
       const endMinutes = endH * 60 + endM;
 
-      const isNowOffDuty = currentMinutes < startMinutes || currentMinutes >= endMinutes;
+      // Day-of-week check
+      const today = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const isDayOff = !workDays.includes(today);
+
+      const isNowOffDuty = isDayOff || currentMinutes < startMinutes || currentMinutes >= endMinutes;
 
       // 1. Pre-Start Warning (5 mins before start)
       const minutesUntilStart = startMinutes - currentMinutes;
@@ -422,7 +489,7 @@ function App() {
     checkSchedule();
     const interval = setInterval(checkSchedule, 10000); // Check every 10s
     return () => clearInterval(interval);
-  }, [schedule, workDuration]);
+  }, [schedule, workDuration, workDays]);
 
 
 
@@ -471,6 +538,7 @@ function App() {
 
   const handleTimerComplete = () => {
     setIsActive(false);
+    localStorage.removeItem('timerState'); // Clear persistent state on completion
 
     // Play sound
     playSound();
@@ -554,19 +622,19 @@ function App() {
       setIsActive(true);
     } else {
       // Cancel Meal Mode -> Go back to Work (Resume)
-      
+
       // If we are currently in the meal window, mark it as skipped so it doesn't auto-start again immediately
       const now = new Date();
       if (mealScheduleEnabled) {
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          const [mealStartH, mealStartM] = mealSchedule.start.split(':').map(Number);
-          const mealStartMinutes = mealStartH * 60 + mealStartM;
-          const [mealEndH, mealEndM] = mealSchedule.end.split(':').map(Number);
-          const mealEndMinutes = mealEndH * 60 + mealEndM;
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const [mealStartH, mealStartM] = mealSchedule.start.split(':').map(Number);
+        const mealStartMinutes = mealStartH * 60 + mealStartM;
+        const [mealEndH, mealEndM] = mealSchedule.end.split(':').map(Number);
+        const mealEndMinutes = mealEndH * 60 + mealEndM;
 
-          if (currentMinutes >= mealStartMinutes && currentMinutes < mealEndMinutes) {
-              mealSkippedRef.current = true;
-          }
+        if (currentMinutes >= mealStartMinutes && currentMinutes < mealEndMinutes) {
+          mealSkippedRef.current = true;
+        }
       }
 
       setMode('WORK');
@@ -582,7 +650,7 @@ function App() {
     }
   };
 
-  const handleSaveSettings = (newWorkDuration, newSchedule, newMealDuration, newMealSchedule, newMealEnabled, newAudioSettings, newNotificationsEnabled, newPopToFrontEnabled) => {
+  const handleSaveSettings = (newWorkDuration, newSchedule, newMealDuration, newMealSchedule, newMealEnabled, newAudioSettings, newNotificationsEnabled, newPopToFrontEnabled, newWorkDays) => {
     setWorkDuration(newWorkDuration);
     setSchedule(newSchedule);
     setMealDuration(newMealDuration);
@@ -593,6 +661,12 @@ function App() {
     localStorage.setItem('notificationsEnabled', JSON.stringify(newNotificationsEnabled));
     setPopToFrontEnabled(newPopToFrontEnabled);
     localStorage.setItem('popToFrontEnabled', JSON.stringify(newPopToFrontEnabled));
+
+    // Save Work Days
+    if (newWorkDays) {
+      setWorkDays(newWorkDays);
+      localStorage.setItem('workDays', JSON.stringify(newWorkDays));
+    }
 
     // Save Audio Settings
     if (newAudioSettings) {
@@ -824,6 +898,7 @@ function App() {
             <Settings
               currentDuration={workDuration}
               currentSchedule={schedule}
+              currentWorkDays={workDays}
               currentMealDuration={mealDuration}
               currentMealSchedule={mealSchedule}
               mealScheduleEnabled={mealScheduleEnabled}
@@ -841,7 +916,7 @@ function App() {
               startupEnabled={startupEnabled}
               onToggleStartup={handleToggleStartup}
               onSave={handleSaveSettings}
-              onClose={() => setActiveView('TIMER')} // "Save" or "Cancel" goes back to Timer
+              onClose={() => setActiveView('TIMER')}
               isEmbedded={true}
             />
           )

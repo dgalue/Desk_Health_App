@@ -3,6 +3,7 @@ import { useState } from 'react';
 const Settings = ({
     currentDuration,
     currentSchedule,
+    currentWorkDays,
     currentMealDuration,
     currentMealSchedule,
     mealScheduleEnabled,
@@ -22,6 +23,18 @@ const Settings = ({
     const [isMealEnabled, setIsMealEnabled] = useState(mealScheduleEnabled);
     const [areNotificationsEnabled, setAreNotificationsEnabled] = useState(notificationsEnabled);
     const [isPopToFrontEnabled, setIsPopToFrontEnabled] = useState(popToFrontEnabled ?? true);
+
+    // Weekly Schedule: which days are active
+    const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const [workDays, setWorkDays] = useState(currentWorkDays || [1, 2, 3, 4, 5]);
+
+    const toggleDay = (dayIndex) => {
+        setWorkDays(prev =>
+            prev.includes(dayIndex)
+                ? prev.filter(d => d !== dayIndex)
+                : [...prev, dayIndex].sort()
+        );
+    };
 
     // Audio State
     const [soundEnabled, setSoundEnabled] = useState(audioSettings?.enabled ?? true);
@@ -49,7 +62,8 @@ const Settings = ({
             isMealEnabled,
             { enabled: soundEnabled, volume, soundType },
             areNotificationsEnabled,
-            isPopToFrontEnabled
+            isPopToFrontEnabled,
+            workDays
         );
         onClose();
     };
@@ -363,6 +377,43 @@ const Settings = ({
                                 onChange={(e) => setSchedule({ ...schedule, end: e.target.value })}
                                 style={inputStyle}
                             />
+                        </div>
+                    </div>
+
+                    {/* Weekly Schedule - Active Days */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>
+                            Active Days
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            {DAY_LABELS.map((label, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => toggleDay(idx)}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '0.5rem',
+                                        border: workDays.includes(idx)
+                                            ? '1px solid var(--primary-color)'
+                                            : '1px solid rgba(255,255,255,0.15)',
+                                        background: workDays.includes(idx)
+                                            ? 'rgba(94, 106, 210, 0.2)'
+                                            : 'rgba(0,0,0,0.2)',
+                                        color: workDays.includes(idx)
+                                            ? 'var(--primary-color)'
+                                            : 'rgba(255,255,255,0.4)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        fontWeight: workDays.includes(idx) ? 600 : 400,
+                                        transition: 'all 0.15s ease',
+                                        minWidth: '44px',
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
