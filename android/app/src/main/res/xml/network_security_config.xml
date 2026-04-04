@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network Security Config for Desk Health.
+
+    - Cleartext (plain HTTP) traffic is blocked everywhere except localhost,
+      which is used by the Capacitor live-reload dev server.
+    - All other traffic must use HTTPS (the default on API 28+, but explicit here).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow HTTP only to localhost so npx cap run android -livereload works in dev -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

@@ -54,6 +54,15 @@ const Settings = ({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        // Validate schedule order
+        if (schedule.start >= schedule.end) {
+            alert('Work start time must be before end time.');
+            return;
+        }
+        if (isMealEnabled && mealSchedule.start >= mealSchedule.end) {
+            alert('Meal start time must be before end time.');
+            return;
+        }
         onSave(
             minutes * 60,
             schedule,
@@ -65,7 +74,7 @@ const Settings = ({
             isPopToFrontEnabled,
             workDays
         );
-        onClose();
+        if (!isEmbedded) onClose();
     };
 
     const containerStyle = isEmbedded ? {
@@ -131,7 +140,7 @@ const Settings = ({
                             min="1"
                             max="120"
                             value={minutes}
-                            onChange={(e) => setMinutes(e.target.value)}
+                            onChange={(e) => setMinutes(Number(e.target.value))}
                             style={inputStyle}
                         />
                     </div>
@@ -220,17 +229,7 @@ const Settings = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        onSave(
-                                                            minutes * 60,
-                                                            schedule,
-                                                            mealMinutes * 60,
-                                                            mealSchedule,
-                                                            isMealEnabled,
-                                                            { ...audioSettings, soundType: preset.id },
-                                                            areNotificationsEnabled
-                                                        );
-                                                        setSoundType(preset.id); // Local update for preview state
-                                                        // Preview sound using shared handler (stops previous sounds)
+                                                        setSoundType(preset.id);
                                                         audioSettings.playSound({
                                                             type: preset.id,
                                                             force: true,
@@ -427,7 +426,7 @@ const Settings = ({
                             min="1"
                             max="120"
                             value={mealMinutes}
-                            onChange={(e) => setMealMinutes(e.target.value)}
+                            onChange={(e) => setMealMinutes(Number(e.target.value))}
                             style={inputStyle}
                         />
                     </div>

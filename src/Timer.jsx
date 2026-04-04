@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { GameLoop } from './GameLoop';
 
 // Timer is now a pure display component - countdown happens in App.jsx
-const Timer = ({ timeLeft, duration, isActive }) => {
+const Timer = ({ timeLeft, duration, isActive, mode = 'WORK' }) => {
     const canvasRef = useRef(null);
     const gameLoopRef = useRef(null);
     const particlesRef = useRef([]);
@@ -168,7 +168,9 @@ const Timer = ({ timeLeft, duration, isActive }) => {
                     {formatTime(timeLeft)}
                 </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
-                    {isActive ? 'Current Session' : 'Ready to Start'}
+                    {isActive
+                        ? (mode === 'MEAL' ? 'Meal Break' : 'Focus Session')
+                        : (mode === 'MEAL' ? 'Meal Break' : 'Ready to Start')}
                 </div>
             </div>
         </div>

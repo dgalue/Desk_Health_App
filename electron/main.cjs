@@ -144,8 +144,6 @@ if (!gotTheLock) {
         }
 
         // IPC Handlers for Startup
-        const { ipcMain } = require('electron');
-
         ipcMain.handle('get-startup-status', () => {
             const settings = app.getLoginItemSettings({ args: ['--hidden'] });
             return settings.openAtLogin;
@@ -192,6 +190,24 @@ if (!gotTheLock) {
             } catch (error) {
                 console.error('Notification failed:', error);
             }
+        });
+
+        // Sound file management — store custom sounds in userData instead of localStorage
+        const soundsDir = path.join(app.getPath('userData'), 'sounds');
+        if (!fs.existsSync(soundsDir)) fs.mkdirSync(soundsDir, { recursive: true });
+
+        ipcMain.handle('save-sound-file', async (event, filename, base64Data) => {
+            const safeName = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = path.join(soundsDir, safeName);
+            const buffer = Buffer.from(base64Data.replace(/^data:[^;]+;base64,/, ''), 'base64');
+            fs.writeFileSync(filePath, buffer);
+            return `file://${filePath.replace(/\\/g, '/')}`;
+        });
+
+        ipcMain.handle('delete-sound-file', async (event, filename) => {
+            const safeName = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = path.join(soundsDir, safeName);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
 
         app.on('activate', () => {

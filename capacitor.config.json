@@ -1,5 +1,18 @@
 {
   "appId": "com.diego.deskhealth",
   "appName": "Desk Health",
-  "webDir": "dist"
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notification",
+      "iconColor": "#5E6AD2",
+      "sound": "beep.wav"
+    }
+  }
 }

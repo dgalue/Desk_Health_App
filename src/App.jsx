@@ -13,6 +13,14 @@ import { useAudio } from './hooks/useAudio';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 
+// Notification ID counter: keeps IDs within the safe 32-bit signed integer range
+// that Android's NotificationManager requires. Date.now() overflows int32.
+let _notifIdCounter = Math.floor(Math.random() * 10000);
+const nextNotifId = () => {
+  _notifIdCounter = (_notifIdCounter + 1) % 2_000_000_000;
+  return _notifIdCounter;
+};
+
 // --- Icons ---
 const Icons = {
   Timer: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
@@ -128,7 +136,7 @@ const Sidebar = ({ activeView, onViewChange }) => {
 
       {/* Footer Info */}
       <div style={{ marginTop: 'auto', paddingLeft: '0.75rem', fontSize: '0.7rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v1.1.0</div>
+        <div><strong style={{ color: 'var(--primary-color)' }}>Desk Health</strong> v2.0.0</div>
         <div>Made with ❤️ by <a href="https://github.com/dgalue" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted currentColor' }}>Diego Galue</a></div>
       </div>
     </div>
@@ -145,6 +153,41 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // --- Capacitor LocalNotifications: one-time setup on Android/iOS ---
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const setupNotifications = async () => {
+      // Request permission via the Capacitor plugin (covers Android 13+ POST_NOTIFICATIONS).
+      // MainActivity also requests it natively; this is the JS-layer request as a fallback.
+      const { display } = await LocalNotifications.requestPermissions();
+      if (display !== 'granted') {
+        console.warn('[DeskHealth] Notification permission not granted:', display);
+      }
+
+      // Create the notification channel on Android (no-op on iOS).
+      // A dedicated channel lets users configure importance/sound independently in Settings.
+      try {
+        await LocalNotifications.createChannel({
+          id: 'desk-health-alerts',
+          name: 'Desk Health Alerts',
+          description: 'Timer and wellness reminders from Desk Health',
+          importance: 4, // IMPORTANCE_HIGH — heads-up notifications
+          visibility: 1, // VISIBILITY_PUBLIC
+          vibration: true,
+          lights: true,
+          lightColor: '#5E6AD2',
+          sound: 'beep.wav'
+        });
+      } catch (err) {
+        // createChannel is Android-only; swallow the error on other platforms.
+        console.warn('[DeskHealth] createChannel:', err);
+      }
+    };
+
+    setupNotifications();
+  }, []);
+
   // Notification Helper (Unified for Electron & Mobile)
   const sendNotification = async (title, body) => {
     if (window.electronAPI) {
@@ -155,13 +198,20 @@ function App() {
           notifications: [{
             title,
             body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + 100) },
-            sound: null
+            id: nextNotifId(),
+            channelId: 'desk-health-alerts',
+            schedule: { at: new Date(Date.now() + 200) },
+            // sound is configured on the channel; null here uses channel default
+            sound: undefined,
+            smallIcon: 'ic_stat_notification',
+            iconColor: '#5E6AD2',
+            // Tapping the notification opens / brings the app to foreground
+            actionTypeId: '',
+            extra: null
           }]
         });
       } catch (err) {
-        console.error("Local Notification Error:", err);
+        console.error('[DeskHealth] Local Notification Error:', err);
       }
     }
   };
@@ -186,9 +236,18 @@ function App() {
   } = useExercises();
 
   // Configuration State
-  const [workDuration, setWorkDuration] = useState(45 * 60);
-  const [mealDuration, setMealDuration] = useState(60 * 60);
-  const [schedule, setSchedule] = useState({ start: '09:00', end: '17:00' });
+  const [workDuration, setWorkDuration] = useState(() => {
+    const s = localStorage.getItem('workDuration');
+    return s ? Number(s) : 45 * 60;
+  });
+  const [mealDuration, setMealDuration] = useState(() => {
+    const s = localStorage.getItem('mealDuration');
+    return s ? Number(s) : 60 * 60;
+  });
+  const [schedule, setSchedule] = useState(() => {
+    const s = localStorage.getItem('schedule');
+    return s ? JSON.parse(s) : { start: '09:00', end: '17:00' };
+  });
 
   // Weekly Schedule: which days the app is active (0=Sun, 1=Mon, ..., 6=Sat)
   const [workDays, setWorkDays] = useState(() => {
@@ -196,7 +255,10 @@ function App() {
     return saved !== null ? JSON.parse(saved) : [1, 2, 3, 4, 5]; // Mon-Fri default
   });
 
-  const [mealSchedule, setMealSchedule] = useState({ start: '12:00', end: '13:00' });
+  const [mealSchedule, setMealSchedule] = useState(() => {
+    const s = localStorage.getItem('mealSchedule');
+    return s ? JSON.parse(s) : { start: '12:00', end: '13:00' };
+  });
   const [mealScheduleEnabled, setMealScheduleEnabled] = useState(() => {
     const saved = localStorage.getItem('mealScheduleEnabled');
     return saved !== null ? JSON.parse(saved) : true;
@@ -361,12 +423,17 @@ function App() {
   }, [isActive, mode, logFocusTime]);
 
   const [permission, setPermission] = useState(() => {
+    // On a Capacitor native platform the polyfilled Notification always reports 'granted'.
+    // On Electron/browser it reflects the real browser permission.
     return 'Notification' in window ? Notification.permission : 'default';
   });
 
   const prevOffDutyRef = useRef(false);
 
   useEffect(() => {
+    // On native mobile, permission is handled in the setupNotifications effect above.
+    // Only invoke the browser Notification API in non-native contexts (Electron, PWA).
+    if (Capacitor.isNativePlatform()) return;
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
       Notification.requestPermission().then(setPermission);
     }
@@ -531,6 +598,8 @@ function App() {
   }, [mealSchedule, mealDuration, mode, isOffDuty, permission, mealScheduleEnabled]);
 
   const requestNotification = () => {
+    // On Capacitor native, permission was already requested at startup via the plugin.
+    if (Capacitor.isNativePlatform()) return;
     if (notificationsEnabled && 'Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission().then(setPermission);
     }
@@ -652,9 +721,13 @@ function App() {
 
   const handleSaveSettings = (newWorkDuration, newSchedule, newMealDuration, newMealSchedule, newMealEnabled, newAudioSettings, newNotificationsEnabled, newPopToFrontEnabled, newWorkDays) => {
     setWorkDuration(newWorkDuration);
+    localStorage.setItem('workDuration', String(newWorkDuration));
     setSchedule(newSchedule);
+    localStorage.setItem('schedule', JSON.stringify(newSchedule));
     setMealDuration(newMealDuration);
+    localStorage.setItem('mealDuration', String(newMealDuration));
     setMealSchedule(newMealSchedule);
+    localStorage.setItem('mealSchedule', JSON.stringify(newMealSchedule));
     setMealScheduleEnabled(newMealEnabled);
     localStorage.setItem('mealScheduleEnabled', JSON.stringify(newMealEnabled));
     setNotificationsEnabled(newNotificationsEnabled);
@@ -780,6 +853,7 @@ function App() {
                         timeLeft={timeLeft}
                         duration={currentDuration}
                         isActive={isActive}
+                        mode={mode}
                       />
                       {/* Glow Effect */}
                       <div style={{

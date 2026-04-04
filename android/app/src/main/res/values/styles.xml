@@ -1,22 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+    <!-- Base application theme. DayNight so Android respects the system dark/light preference.
+         NoActionBar because the Capacitor WebView fills the entire screen. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <!-- Draw content edge-to-edge under the system bars -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/colorBackground</item>
+        <item name="android:navigationBarColor">@color/colorBackground</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <!-- Used for the main activity after the splash is dismissed -->
+    <style name="AppTheme.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/colorBackground</item>
+        <item name="android:navigationBarColor">@color/colorBackground</item>
     </style>
 
-
+    <!-- Splash screen theme — shown while the app cold-starts.
+         Uses androidx.core:core-splashscreen (API 12+).
+         On API 31+ the system reads windowSplashScreen* attributes;
+         on older APIs core-splashscreen falls back to a plain window background. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- Legacy pre-31 background (also used as a fallback drawable) -->
         <item name="android:background">@drawable/splash</item>
+        <!-- API 31+ splash window background colour (matches app dark background) -->
+        <item name="windowSplashScreenBackground">@color/colorBackground</item>
+        <!-- API 31+ centre icon — use the adaptive-icon foreground layer -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- After the splash the activity transitions to the real app theme -->
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
+
 </resources>

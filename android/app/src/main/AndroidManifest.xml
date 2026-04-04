@@ -6,7 +6,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -17,6 +18,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep link / notification tap: brings the existing task to foreground -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="com.diego.deskhealth" />
             </intent-filter>
         </activity>
 
@@ -29,7 +37,40 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
+    <!-- ==================== PERMISSIONS ==================== -->
 
+    <!-- Basic network access -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Vibrate for notification alerts -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Wake lock: keeps the CPU alive long enough for the notification to fire -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- POST_NOTIFICATIONS: required on Android 13+ (API 33+) to show notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: required for precise timer notifications.
+         USE_EXACT_ALARM (API 33+) is auto-granted; SCHEDULE_EXACT_ALARM requires user opt-in
+         on API 31-32. Both are declared so the correct one is used per OS version. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Lets the app ask the user to disable battery optimisation (Doze) for itself,
+         which is needed so background timer alarms are not deferred indefinitely. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Re-schedule notifications after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- ==================== QUERIES ==================== -->
+    <!-- Android 11+ (API 30) package-visibility: declare intents the app queries
+         so the OS does not hide the target components.
+         Required so ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS resolves correctly. -->
+    <queries>
+        <intent>
+            <action android:name="android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+        </intent>
+    </queries>
 </manifest>

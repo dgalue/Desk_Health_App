@@ -126,7 +126,9 @@ const StatsModal = ({ stats, onClose }) => {
                     {last7Days.map((day, idx) => {
                         const isToday = idx === 6;
                         // Max reliable height scaling ref (e.g., 10 exercises)
-                        const heightPct = Math.min(100, Math.max(10, (day.data.exercisesCompleted / 8) * 100));
+                        const heightPct = day.data.exercisesCompleted === 0
+                            ? 0
+                            : Math.min(100, Math.max(10, (day.data.exercisesCompleted / 8) * 100));
 
                         return (
                             <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
