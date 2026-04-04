@@ -124,6 +124,7 @@ const StatsModal = ({ stats, onClose }) => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '0.75rem', paddingTop: '1rem' }}>
                     {last7Days.map((day, idx) => {
+                        const dateKey = day.date.toISOString().split('T')[0];
                         const isToday = idx === 6;
                         // Max reliable height scaling ref (e.g., 10 exercises)
                         const heightPct = day.data.exercisesCompleted === 0
@@ -131,7 +132,7 @@ const StatsModal = ({ stats, onClose }) => {
                             : Math.min(100, Math.max(10, (day.data.exercisesCompleted / 8) * 100));
 
                         return (
-                            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
+                            <div key={dateKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
                                 <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                                     <div style={{
                                         width: '100%',

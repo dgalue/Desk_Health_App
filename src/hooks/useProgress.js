@@ -5,7 +5,8 @@ const STORAGE_KEY = 'deskHealthv1_progress';
 export const useProgress = () => {
     const [logs, setLogs] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
+        if (!saved) return {};
+        try { return JSON.parse(saved); } catch { return {}; }
     });
 
     // Persist logs whenever they change
@@ -88,9 +89,14 @@ export const useProgress = () => {
 
         // Robust calculation:
         // 1. Convert all valid streak dates to timestamps
+        // Parse date strings without timezone ambiguity (avoids UTC vs local shift)
+        const parseLocalDate = (d) => {
+            const [y, m, day] = d.split('-').map(Number);
+            return new Date(y, m - 1, day).getTime();
+        };
         const validDates = sortedDates
             .filter(isStreakDay)
-            .map(d => new Date(d).setHours(0, 0, 0, 0))
+            .map(parseLocalDate)
             .sort((a, b) => a - b);
 
         if (validDates.length > 0) {
@@ -113,8 +119,8 @@ export const useProgress = () => {
 
             // Determine if current streak is active
             const lastValidDate = validDates[validDates.length - 1];
-            const todayTs = new Date(todayKey).setHours(0, 0, 0, 0);
-            const yesterdayTs = new Date(todayTs - 86400000).setHours(0, 0, 0, 0);
+            const todayTs = parseLocalDate(todayKey);
+            const yesterdayTs = todayTs - 86400000;
 
             if (lastValidDate === todayTs || lastValidDate === yesterdayTs) {
                 currentStreak = currentSequence;

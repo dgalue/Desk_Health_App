@@ -63,10 +63,9 @@ const DeleteButton = ({ name, onDelete }) => {
 };
 
 // Pure Visual Component
-const ExerciseItem = React.forwardRef(({ exercise, isExerciseEnabled, onToggleEnabled, onEdit, onDelete, highlightedId, dragHandleProps, style, isDragging, isOverlay }, ref) => {
+const ExerciseItem = ({ exercise, isExerciseEnabled, onToggleEnabled, onEdit, onDelete, highlightedId, dragHandleProps, style, isDragging, isOverlay }) => {
     return (
         <div
-            ref={ref}
             style={{
                 ...style,
                 padding: '1rem',
@@ -191,7 +190,7 @@ const ExerciseItem = React.forwardRef(({ exercise, isExerciseEnabled, onToggleEn
             )}
         </div>
     );
-});
+};
 
 // Sortable Wrapper
 const SortableItem = ({ id, exercise, isExerciseEnabled, onToggleEnabled, onEdit, onDelete, highlightedId }) => {
@@ -400,7 +399,7 @@ const ExerciseManager = ({ allExercises, customExercises, onAdd, onUpdate, onDel
                 style={contentStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
                     <h2>Manage Exercises</h2>
-                    {!isEmbedded && <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', padding: '0.5rem' }}>✕</button>}
+                    {!isEmbedded && <button onClick={onClose} aria-label="Close exercise manager" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', padding: '0.5rem' }}>✕</button>}
                 </div>
 
                 {/* Add/Edit Form */}

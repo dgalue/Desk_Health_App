@@ -30,14 +30,16 @@ const Icons = {
   Utensils: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
 };
 
+// --- Shared menu items ---
+const MENU_ITEMS = [
+  { id: 'TIMER', label: 'Focus', Icon: Icons.Timer },
+  { id: 'EXERCISES', label: 'Exercises', Icon: Icons.List },
+  { id: 'STATS', label: 'Stats', Icon: Icons.BarChart },
+  { id: 'SETTINGS', label: 'Settings', Icon: Icons.Settings },
+];
+
 // --- BottomNav Component (Mobile) ---
 const BottomNav = ({ activeView, onViewChange }) => {
-  const menuItems = [
-    { id: 'TIMER', label: 'Focus', icon: <Icons.Timer /> },
-    { id: 'EXERCISES', label: 'Exercises', icon: <Icons.List /> },
-    { id: 'STATS', label: 'Stats', icon: <Icons.BarChart /> },
-    { id: 'SETTINGS', label: 'Settings', icon: <Icons.Settings /> },
-  ];
 
   return (
     <div style={{
@@ -52,10 +54,11 @@ const BottomNav = ({ activeView, onViewChange }) => {
       padding: '0.75rem 0.5rem',
       zIndex: 100
     }}>
-      {menuItems.map(item => (
+      {MENU_ITEMS.map(item => (
         <button
           key={item.id}
           onClick={() => onViewChange(item.id)}
+          aria-label={item.label}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -69,7 +72,7 @@ const BottomNav = ({ activeView, onViewChange }) => {
             transition: 'color 0.2s'
           }}
         >
-          {item.icon}
+          <item.Icon />
           <span>{item.label}</span>
         </button>
       ))}
@@ -79,12 +82,6 @@ const BottomNav = ({ activeView, onViewChange }) => {
 
 // --- Sidebar Component (Desktop) ---
 const Sidebar = ({ activeView, onViewChange }) => {
-  const menuItems = [
-    { id: 'TIMER', label: 'Focus', icon: <Icons.Timer /> },
-    { id: 'EXERCISES', label: 'Exercises', icon: <Icons.List /> },
-    { id: 'STATS', label: 'Stats', icon: <Icons.BarChart /> },
-    { id: 'SETTINGS', label: 'Settings', icon: <Icons.Settings /> },
-  ];
 
   return (
     <div style={{
@@ -108,10 +105,11 @@ const Sidebar = ({ activeView, onViewChange }) => {
         <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)', paddingLeft: '0.75rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Menu
         </div>
-        {menuItems.map(item => (
+        {MENU_ITEMS.map(item => (
           <button
             key={item.id}
             onClick={() => onViewChange(item.id)}
+            aria-label={item.label}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -128,7 +126,7 @@ const Sidebar = ({ activeView, onViewChange }) => {
               transition: 'all 0.1s ease'
             }}
           >
-            <span style={{ opacity: activeView === item.id ? 1 : 0.7, display: 'flex' }}>{item.icon}</span>
+            <span style={{ opacity: activeView === item.id ? 1 : 0.7, display: 'flex' }}><item.Icon /></span>
             {item.label}
           </button>
         ))}
@@ -287,6 +285,12 @@ function App() {
   const handleTimerCompleteRef = useRef(null);
   const timerCompletedRef = useRef(false); // Track if timer already completed
 
+  // Refs to avoid stale closures in schedule/meal interval effects
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  const isActiveRef = useRef(isActive);
+  useEffect(() => { notificationsEnabledRef.current = notificationsEnabled; }, [notificationsEnabled]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+
   // NEW: Ref to store paused work time when switching to Meal Mode
   const pausedWorkTimeRef = useRef(null);
 
@@ -363,21 +367,38 @@ function App() {
 
     try {
       const state = JSON.parse(saved);
-      const elapsed = Math.floor((Date.now() - state.savedAt) / 1000);
-      const remaining = state.timeLeft - elapsed;
+      // Use targetEndTime for accurate restoration (not savedAt-based arithmetic)
+      const remaining = state.targetEndTime
+        ? Math.ceil((state.targetEndTime - Date.now()) / 1000)
+        : state.timeLeft - Math.floor((Date.now() - state.savedAt) / 1000);
 
       if (remaining > 0) {
-        // Timer still has time left — resume it
         setMode(state.mode);
         setCurrentDuration(state.currentDuration);
         setTimeLeft(remaining);
         setIsActive(true);
-        console.log(`Timer restored: ${remaining}s remaining (${state.mode} mode)`);
       } else {
-        // Timer would have completed while app was closed
-        // Just clear it and let the user start fresh
+        // Timer expired while app was closed (e.g. reboot).
+        // Auto-start a new work cycle if we're within working hours.
         localStorage.removeItem('timerState');
-        console.log('Timer expired while app was closed — cleared.');
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const savedSchedule = localStorage.getItem('schedule');
+        const savedWorkDays = localStorage.getItem('workDays');
+        const sched = savedSchedule ? JSON.parse(savedSchedule) : schedule;
+        const days = savedWorkDays ? JSON.parse(savedWorkDays) : workDays;
+        const [sH, sM] = sched.start.split(':').map(Number);
+        const [eH, eM] = sched.end.split(':').map(Number);
+        const isWorkDay = days.includes(now.getDay());
+        const isInSchedule = currentMinutes >= sH * 60 + sM && currentMinutes < eH * 60 + eM;
+
+        if (isWorkDay && isInSchedule) {
+          setMode('WORK');
+          setCurrentDuration(workDuration);
+          setTimeLeft(workDuration);
+          setIsActive(true);
+        }
       }
     } catch (e) {
       localStorage.removeItem('timerState');
@@ -503,41 +524,38 @@ function App() {
       // Correct Pre-Start Logic:
       if (minutesUntilStart <= 5 && minutesUntilStart > 0 && !warningSentRef.current) {
         warningSentRef.current = true;
-        if (notificationsEnabled) {
+        if (notificationsEnabledRef.current) {
           sendNotification("Get Ready!", `Work schedule starts in ${minutesUntilStart} minutes.`);
         }
-      } else if (minutesUntilStart > 5 || currentMinutes >= startMinutes) {
-        // Reset warning state if we move away from the warning window
-        if (currentMinutes < startMinutes) warningSentRef.current = false;
-        // If we passed start time, we don't reset to false (to avoid repeating), 
-        // but we might want to reset for TOMORROW. 
-        // Simply: if minutesUntilStart is huge (tomorrow), we reset.
-        if (minutesUntilStart < -60) warningSentRef.current = false; // Reset after 1 hour past start? Simpler logic:
       }
 
-      // Reset warning ref for the next day/cycle if we are far from start
-      if (Math.abs(startMinutes - currentMinutes) > 60) {
+      // Reset warning ref when outside the 5-min warning window
+      // (either before the window or more than 60 min past start for next-day reset)
+      if (minutesUntilStart > 5 || minutesUntilStart < -60) {
         warningSentRef.current = false;
       }
 
-
-      // 2. Late Start Check (Run ONCE on mount/startup)
+      // 2. Startup Check (Run ONCE on mount/startup)
+      // If within working hours and timer is not active, auto-start the work timer.
+      // This covers: reboot, clean launch, or any case where the app starts mid-schedule.
       if (!startupCheckDoneRef.current) {
         startupCheckDoneRef.current = true;
-        // If we are INSIDE the schedule (isNowOffDuty is FALSE) but Timer is NOT active
-        if (!isNowOffDuty && !isActive && mode !== 'MEAL') {
-          if (notificationsEnabled) {
-            sendNotification("Late Start?", "You are within working hours. Open app to start the timer.");
+        if (!isNowOffDuty && !isActiveRef.current && mode !== 'MEAL') {
+          setMode('WORK');
+          setCurrentDuration(workDuration);
+          setTimeLeft(workDuration);
+          setIsActive(true);
+          if (notificationsEnabledRef.current) {
+            sendNotification("Work Started", "Focus timer started automatically.");
           }
-          // Optional: Auto-show window?
-          // window.electronAPI.focusWindow(); // Maybe too intrusive? Notification is enough.
         }
       }
 
-
       if (isNowOffDuty) {
-        setIsOffDuty(true);
-        setIsActive(false);
+        setIsOffDuty(prev => {
+          if (!prev) setIsActive(false);
+          return true;
+        });
       } else {
         setIsOffDuty(false);
         // Auto-start if transitioning from Off Duty -> On Duty
@@ -545,7 +563,7 @@ function App() {
           setMode('WORK');
           setCurrentDuration(workDuration);
           setIsActive(true);
-          if (notificationsEnabled) {
+          if (notificationsEnabledRef.current) {
             sendNotification("Work Started", "Focus timer started automatically.");
           }
         }
@@ -586,7 +604,7 @@ function App() {
         setMode('MEAL');
         setCurrentDuration(mealDuration);
         setIsActive(true);
-        if (notificationsEnabled) {
+        if (notificationsEnabledRef.current) {
           sendNotification("Meal Time!", "Time for your meal break.");
         }
       }
@@ -793,6 +811,7 @@ function App() {
               <button
                 onClick={toggleMealMode}
                 title="Meal Mode"
+                aria-label={mode === 'MEAL' ? 'Cancel meal break' : 'Start meal break'}
                 style={{
                   background: mode === 'MEAL' ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
                   border: '1px solid var(--glass-border)',

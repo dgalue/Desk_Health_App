@@ -46,6 +46,7 @@ const ExerciseCard = ({ exercise, onDone }) => {
 
                 <button
                     onClick={onDone}
+                    aria-label="Complete exercise and return to work"
                     style={{
                         width: '100%',
                         padding: '1rem',
@@ -59,8 +60,7 @@ const ExerciseCard = ({ exercise, onDone }) => {
                         transition: 'transform 0.2s',
                         boxShadow: '0 4px 12px rgba(129, 140, 248, 0.3)'
                     }}
-                    onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    className="exercise-done-btn"
                 >
                     I'm Done, Back to Work
                 </button>

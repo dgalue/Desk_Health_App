@@ -6,7 +6,7 @@
 
 - Author: Diego Galue
 - App ID: `com.diego.deskhealth`
-- Current version: `1.1.0`
+- Current version: `2.0.0`
 
 ## Tech Stack
 

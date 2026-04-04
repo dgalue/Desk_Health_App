@@ -123,8 +123,12 @@ export const useExercises = () => {
     };
 
     const moveExercise = (fromIndex, toIndex) => {
-        const newOrder = allExercises.map(getExerciseId);
-        const [moved] = newOrder.splice(fromIndex, 1);
+        const ids = allExercises.map(getExerciseId);
+        const moved = ids[fromIndex];
+        const newOrder = [
+            ...ids.slice(0, fromIndex),
+            ...ids.slice(fromIndex + 1)
+        ];
         newOrder.splice(toIndex, 0, moved);
 
         setExerciseOrder(newOrder);

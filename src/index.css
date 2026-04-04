@@ -139,3 +139,17 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 input[type="time"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* Hover effects (replaces direct DOM style mutation) */
+.exercise-done-btn:hover {
+  transform: scale(1.02);
+}
+
+.exercise-change-btn:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+}
+
+.exercise-option-card:hover {
+  background: rgba(255,255,255,0.1) !important;
+  transform: translateY(-2px);
+}

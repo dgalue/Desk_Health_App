@@ -36,8 +36,7 @@ const ExercisePreview = ({ exercise, onChangeExercise }) => {
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = 'rgba(56, 189, 248, 0.2)'}
-                    onMouseLeave={(e) => e.target.style.background = 'rgba(56, 189, 248, 0.1)'}
+                    className="exercise-change-btn"
                 >
                     Change
                 </button>

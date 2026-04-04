@@ -93,7 +93,8 @@ const Timer = ({ timeLeft, duration, isActive, mode = 'WORK' }) => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const strokeDasharray = 283;
+    const CIRCLE_RADIUS = 45;
+    const strokeDasharray = 2 * Math.PI * CIRCLE_RADIUS;
     const strokeDashoffset = strokeDasharray - (strokeDasharray * progress) / 100;
 
     return (

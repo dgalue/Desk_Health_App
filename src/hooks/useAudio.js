@@ -32,7 +32,8 @@ const SOUND_PRESETS = {
 export const useAudio = () => {
     const [enabled, setEnabled] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.ENABLED);
-        return saved !== null ? JSON.parse(saved) : true;
+        if (saved === null) return true;
+        try { return JSON.parse(saved); } catch { return true; }
     });
 
     const [volume, setVolume] = useState(() => {
@@ -42,7 +43,8 @@ export const useAudio = () => {
 
     const [customPresets, setCustomPresets] = useState(() => {
         const saved = localStorage.getItem('deskHealth_customSounds');
-        return saved ? JSON.parse(saved) : [];
+        if (!saved) return [];
+        try { return JSON.parse(saved); } catch { return []; }
     });
 
     const allPresets = useMemo(
@@ -62,6 +64,7 @@ export const useAudio = () => {
     // by a real user gesture. We create and immediately suspend a silent AudioContext
     // on the first user interaction so subsequent programmatic plays work without a gesture.
     const audioContextUnlockedRef = useRef(false);
+    const audioContextRef = useRef(null);
     useEffect(() => {
         const unlock = () => {
             if (audioContextUnlockedRef.current) return;
@@ -69,6 +72,7 @@ export const useAudio = () => {
 
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                audioContextRef.current = ctx;
                 // Play a silent buffer to satisfy the autoplay policy.
                 const buf = ctx.createBuffer(1, 1, 22050);
                 const src = ctx.createBufferSource();
@@ -94,6 +98,10 @@ export const useAudio = () => {
             document.removeEventListener('touchstart', unlock, true);
             document.removeEventListener('touchend', unlock, true);
             document.removeEventListener('click', unlock, true);
+            if (audioContextRef.current) {
+                audioContextRef.current.close().catch(() => {});
+                audioContextRef.current = null;
+            }
         };
     }, []);
 
@@ -180,7 +188,7 @@ export const useAudio = () => {
             // The Capacitor LocalNotifications sound attribute handles audio in that scenario.
             console.warn('[DeskHealth] Audio playback blocked:', error.name, error.message);
         });
-    }, [enabled, volume, soundType, customPresets]);
+    }, [enabled, volume, soundType, allPresets]);
 
     return {
         enabled,

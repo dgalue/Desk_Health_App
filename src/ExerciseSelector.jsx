@@ -1,6 +1,4 @@
-import { exercises } from './exercises';
-
-const ExerciseSelector = ({ onSelect }) => {
+const ExerciseSelector = ({ exercises, onSelect }) => {
     return (
         <div className="exercise-selector" style={{
             animation: 'fadeIn 0.5s ease-out',
@@ -21,7 +19,7 @@ const ExerciseSelector = ({ onSelect }) => {
             }}>
                 {exercises.map((ex) => (
                     <div
-                        key={ex.id}
+                        key={ex.id || ex.name}
                         onClick={() => onSelect(ex)}
                         className="exercise-option"
                         style={{
@@ -36,14 +34,7 @@ const ExerciseSelector = ({ onSelect }) => {
                             flexDirection: 'column',
                             justifyContent: 'space-between'
                         }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                        }}
+                        className="exercise-option-card"
                     >
                         <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--primary-color)' }}>
                             {ex.name}
